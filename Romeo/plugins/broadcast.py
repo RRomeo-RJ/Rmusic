@@ -3,7 +3,7 @@ from requests import get
 from pyrogram import Client, enums, filters
 from pyrogram.types import Message
 from Romeo.helper.data import *
-from Romeo import SUDO_USER
+from Romeo import SUDO_USER, app
 
 def get_arg(message: Message):
     msg = message.text
@@ -13,7 +13,7 @@ def get_arg(message: Message):
         return ""
     return " ".join(split[1:])
 
-@Client.on_message(filters.command(["gcast"], ".") & (filters.me | filters.user(SUDO_USER)))
+@app.on_message(filters.command(["gcast"], ".") & (filters.me | filters.user(SUDO_USER)))
 async def gcast(client: Client, message: Message):
     if message.reply_to_message or get_arg(message):
         tex = await message.reply_text("`Started global broadcast...`")
@@ -42,7 +42,7 @@ async def gcast(client: Client, message: Message):
     await tex.edit_text(f"**Successfully Sent Message To** `{done}` **Groups, chat, Failed to Send Message To** `{error}` **Groups**")
 
 
-@Client.on_message(filters.command(["gucast"], ".") & (filters.me | filters.user(SUDO_USER)))
+@app.on_message(filters.command(["gucast"], ".") & (filters.me | filters.user(SUDO_USER)))
 async def gucast(client: Client, message: Message):
     if message.reply_to_message or get_arg(message):
         tex = await message.reply_text("`Started global broadcast...`")
