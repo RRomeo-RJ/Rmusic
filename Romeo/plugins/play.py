@@ -128,7 +128,6 @@ async def generate_cover(thumbnail, title, userid, ctitle):
     return f"final{userid}.png"
 
 @Client.on_message(filters.command(["play", "ply"]) & filters.group)
-@AssistantAdd
 async def play(c: Client, m: Message):
     await m.delete()
     replied = m.reply_to_message
