@@ -14,7 +14,7 @@ import yt_dlp
 import ffmpeg
 from Romeo import app, call_py
 from Romeo.active import *
-from Romeo.queues import QUEUE, add_to_queue
+from Romeo.queues import QUEUE, add_to_queue, remove_from_queue
 
 # Define your themes and colors
 themes = ["blue", "red", "pink", "purple"]
@@ -202,12 +202,10 @@ async def play(c: Client, m: Message):
                         if chat_id in QUEUE:
                             pos = add_to_queue(chat_id, songname, ytlink, url, "Audio", 0)
                             await romeo.delete()
-                            requester = (
-                                f"[{m.from_user.first_name}](tg://user?id={m.from_user.id})"
-                            )
+                            requester = f"[{m.from_user.first_name}](tg://user?id={m.from_user.id})"
                             await m.reply_photo(
                                 photo=queuem,
-                                caption=f"💡 **Track added to queue »** `{pos}`\n\n🏷 **Name:** [{songname[:22]}]({url}) | `music`\n💭 **Chat:** `{chat_id}`\n🎧 **Request by:** {requester}"
+                                caption=f"💡 **Track added to queue »** `{pos}`\n\n🏷 **Name:** [{songname[:22]}]({url}) | `music`\n**⏱ Duration:** `{duration}`\n🎧 **Request by:** {requester}"
                             )
                         else:
                             try:
@@ -225,3 +223,25 @@ async def play(c: Client, m: Message):
                             except Exception as e:
                                 await romeo.delete()
                                 await m.reply_text(f"🚫 error:\n\n» {e}")
+
+@Client.on_message(filters.command(["skip"]) & filters.group)
+@AssistantAdd
+async def skip(c: Client, m: Message):
+    chat_id = m.chat.id
+    if chat_id in QUEUE:
+        await call_py.leave_group_call(chat_id)  # Stop the current stream
+        remove_from_queue(chat_id)  # Remove the current song from the queue
+        if QUEUE[chat_id]:
+            next_song = QUEUE[chat_id][0]  # Get the next song
+            songname, ytlink, url, song_type, _ = next_song
+            try:
+                await call_py.join_group_call(chat_id, AudioPiped(ytlink), stream_type=StreamType(local_stream=True))
+                await add_active_chat(chat_id)
+                await m.reply_text(f"🎶 **Skipped to next track:** {songname}")
+            except Exception as e:
+                await m.reply_text(f"🚫 error:\n\n» {e}")
+        else:
+            await m.reply_text("🔄 The queue is empty. No more tracks to play.")
+    else:
+        await m.reply_text("🚫 No song is currently playing.")
+
