@@ -2,7 +2,6 @@ import aiohttp
 import asyncio
 import os
 import random
-import aiofiles
 from pyrogram import Client, filters
 from pyrogram.errors import UserAlreadyParticipant, UserNotParticipant
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
@@ -14,6 +13,7 @@ import yt_dlp
 import ffmpeg
 from Romeo import app, call_py
 from Romeo.active import *
+from Romeo.fonts import CHAT_TITLE
 from Romeo.queues import QUEUE, add_to_queue, remove_from_queue
 
 # Define your themes and colors
@@ -31,6 +31,7 @@ async def bash(command: str):
     return stdout.decode(), stderr.decode()
 
 def ytsearch(query):
+    """Search YouTube for the given query and return relevant details."""
     try:
         search = VideosSearch(query, limit=1).result()
         data = search["result"][0]
@@ -41,22 +42,19 @@ def ytsearch(query):
         videoid = data["id"]
         return [songname, url, duration, thumbnail, videoid]
     except Exception as e:
-        print(e)
+        print(f"Error in ytsearch: {e}")
         return 0
 
 async def ytdl(format: str, link: str):
-    stdout, stderr = await bash(f'yt-dlp --geo-bypass -g -f "[height<=?720][width<=?1280]" {link}')
+    """Download the audio stream using yt-dlp."""
+    stdout, stderr = await bash(f'yt-dlp --geo-bypass -g -f "{format}" {link}')
     if stdout:
         return 1, stdout.strip()
+    print(f"Error in ytdl: {stderr}")
     return 0, stderr
 
-
-chat_id = None
-DISABLED_GROUPS = []
-useer = "NaN"
-ACTV_CALLS = []
-
 def transcode(filename):
+    """Convert audio file to raw format."""
     ffmpeg.input(filename).output(
         "input.raw", 
         format="s16le", 
@@ -67,6 +65,7 @@ def transcode(filename):
     os.remove(filename)
 
 def convert_seconds(seconds):
+    """Convert seconds to MM:SS format."""
     seconds = seconds % (24 * 3600)
     seconds %= 3600
     minutes = seconds // 60
@@ -74,10 +73,12 @@ def convert_seconds(seconds):
     return "%02d:%02d" % (minutes, seconds)
 
 def time_to_seconds(time):
+    """Convert time string to seconds."""
     stringt = str(time)
     return sum(int(x) * 60 ** i for i, x in enumerate(reversed(stringt.split(":"))))
 
 def changeImageSize(maxWidth, maxHeight, image):
+    """Resize image while maintaining aspect ratio."""
     widthRatio = maxWidth / image.size[0]
     heightRatio = maxHeight / image.size[1]
     newWidth = int(widthRatio * image.size[0])
@@ -86,6 +87,7 @@ def changeImageSize(maxWidth, maxHeight, image):
     return newImage
 
 async def generate_cover(thumbnail, title, userid, ctitle):
+    """Generate cover image with title and other details."""
     async with aiohttp.ClientSession() as session:
         async with session.get(thumbnail) as resp:
             if resp.status == 200:
@@ -130,27 +132,19 @@ async def generate_cover(thumbnail, title, userid, ctitle):
 
 @app.on_message(filters.command(["play", "ply"], [".", "/", "?", "@", "!"]) & filters.group)
 async def play(c: Client, m: Message):
+    """Handle the /play command."""
     await m.delete()
     replied = m.reply_to_message
     chat_id = m.chat.id
- #   _assistant = await get_assistant(chat_id, "assistant")
- #   assistant = _assistant["saveassistant"]
-    
+
     if replied:
         if replied.audio or replied.voice:
             romeo = await replied.reply("📥 **downloading audio...**")
             dl = await replied.download()
             link = replied.link
-            if replied.audio:
-                if replied.audio.title:
-                    songname = replied.audio.title[:70]
-                else:
-                    if replied.audio.file_name:
-                        songname = replied.audio.file_name[:70]
-                    else:
-                        songname = "Audio"
-            elif replied.voice:
-                songname = "Voice Note"
+            songname = replied.audio.title[:70] if replied.audio.title else (replied.audio.file_name[:70] if replied.audio.file_name else "Audio")
+
+            print(f"Downloaded file: {dl}")
 
             if chat_id in QUEUE:
                 pos = add_to_queue(chat_id, songname, dl, link, "Audio", 0)
@@ -173,59 +167,61 @@ async def play(c: Client, m: Message):
                 except Exception as e:
                     await romeo.delete()
                     await m.reply_text(f"🚫 error:\n\n» {e}")
+                    
+    else:
+        if len(m.command) < 2:
+            await m.reply_text(f"💬 **Usage: /play Give a Title Song To Play Music or /vplay for Video Play**")
         else:
-            if len(m.command) < 2:
-                await m.reply_text(f"💬**Usage: /play Give a Title Song To Play Music or /vplay for Video Play**")
+            romeo = await m.reply_text(f"**Downloading**\n\n0% ▓▓▓▓▓▓▓▓▓▓▓▓ 100%")
+            query = m.text.split(None, 1)[1]
+            search = ytsearch(query)
+            if search == 0:
+                await romeo.edit("💬 **no results found.**")
             else:
-                romeo = await m.reply_text(f"**Downloading**\n\n0% ▓▓▓▓▓▓▓▓▓▓▓▓ 100%")
-                query = m.text.split(None, 1)[1]
-                search = ytsearch(query)
-                if search == 0:
-                    await romeo.edit("💬 **no results found.**")
+                songname = search[0]
+                title = search[0]
+                url = search[1]
+                duration = search[2]
+                thumbnail = search[3]
+                videoid = search[4]
+                userid = m.from_user.id
+                gcname = m.chat.title
+                ctitle = await CHAT_TITLE(gcname)
+                image = await play_thumb(videoid)
+                queuem = await queue_thumb(videoid)
+                format = "bestaudio"
+                abhi, ytlink = await ytdl(format, url)
+                if abhi == 0:
+                    await romeo.edit(f"💬 yt-dl issues detected\n\n» `{ytlink}`")
                 else:
-                    songname = search[0]
-                    title = search[0]
-                    url = search[1]
-                    duration = search[2]
-                    thumbnail = search[3]
-                    videoid = search[4]
-                    userid = m.from_user.id
-                    gcname = m.chat.title
-                    ctitle = await CHAT_TITLE(gcname)
-                    image = await play_thumb(videoid)
-                    queuem = await queue_thumb(videoid)
-                    format = "bestaudio"
-                    abhi, ytlink = await ytdl(format, url)
-                    if abhi == 0:
-                        await romeo.edit(f"💬 yt-dl issues detected\n\n» `{ytlink}`")
+                    if chat_id in QUEUE:
+                        pos = add_to_queue(chat_id, songname, ytlink, url, "Audio", 0)
+                        await romeo.delete()
+                        requester = f"[{m.from_user.first_name}](tg://user?id={m.from_user.id})"
+                        await m.reply_photo(
+                            photo=queuem,
+                            caption=f"💡 **Track added to queue »** `{pos}`\n\n🏷 **Name:** [{songname[:22]}]({url}) | `music`\n**⏱ Duration:** `{duration}`\n🎧 **Request by:** {requester}"
+                        )
                     else:
-                        if chat_id in QUEUE:
-                            pos = add_to_queue(chat_id, songname, ytlink, url, "Audio", 0)
+                        try:
+                            cover = await generate_cover(thumbnail, title, userid, ctitle)
+                            await call_py.join_group_call(chat_id, AudioPiped(ytlink), stream_type=StreamType(local_stream=True))
+                            await add_active_chat(chat_id)
+                            add_to_queue(chat_id, songname, ytlink, url, "Audio", 0)
                             await romeo.delete()
                             requester = f"[{m.from_user.first_name}](tg://user?id={m.from_user.id})"
                             await m.reply_photo(
-                                photo=queuem,
-                                caption=f"💡 **Track added to queue »** `{pos}`\n\n🏷 **Name:** [{songname[:22]}]({url}) | `music`\n**⏱ Duration:** `{duration}`\n🎧 **Request by:** {requester}"
+                                photo=cover,
+                                caption=f"🏷 **Name:** [{songname[:22]}]({url})\n💭 **Chat:** `{chat_id}`\n💡 **Status:** `Playing`\n🎧 **Request by:** {requester}\n📹 **Stream type:** `Music`"
                             )
-                        else:
-                            try:
-                                cover = await generate_cover(thumbnail, title, userid, ctitle)
-                                await call_py.join_group_call(chat_id, AudioPiped(ytlink), stream_type=StreamType(local_stream=True))
-                                await add_active_chat(chat_id)
-                                add_to_queue(chat_id, songname, ytlink, url, "Audio", 0)
-                                await romeo.delete()
-                                requester = f"[{m.from_user.first_name}](tg://user?id={m.from_user.id})"
-                                await m.reply_photo(
-                                    photo=cover,
-                                    caption=f"🏷 **Name:** [{songname[:22]}]({url})\n💭 **Chat:** `{chat_id}`\n💡 **Status:** `Playing`\n🎧 **Request by:** {requester}\n📹 **Stream type:** `Music`"
-                                )
-                                os.remove(cover)
-                            except Exception as e:
-                                await romeo.delete()
-                                await m.reply_text(f"🚫 error:\n\n» {e}")
+                            os.remove(cover)
+                        except Exception as e:
+                            await romeo.delete()
+                            await m.reply_text(f"🚫 error:\n\n» {e}")
 
 @app.on_message(filters.command(["skip"], [".", "/", "?", "@", "!"]) & filters.group)
 async def skip(c: Client, m: Message):
+    """Handle the /skip command."""
     await m.delete()
     chat_id = m.chat.id
     if chat_id in QUEUE:
@@ -244,4 +240,3 @@ async def skip(c: Client, m: Message):
             await m.reply_text("🔄 The queue is empty. No more tracks to play.")
     else:
         await m.reply_text("🚫 No song is currently playing.")
-
