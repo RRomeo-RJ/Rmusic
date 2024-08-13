@@ -1,5 +1,6 @@
 QUEUE = {}
 
+
 def add_to_queue(chat_id, songname, link, ref, type, quality):
    if chat_id in QUEUE:
       chat_queue = QUEUE[chat_id]
