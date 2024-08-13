@@ -24,4 +24,5 @@ client = Client(
     plugins=dict(root="Romeo/plugins")
 )
 
+
 call_py = PyTgCalls(client)
