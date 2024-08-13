@@ -2,7 +2,7 @@ aiofiles
 aiohttp
 motor
 pyrogram
-git+https://github.com/RRomeoRJ0143/pytgcalls
+py-tgcalls==0.9.7
 requests
 telegraph
 tgcrypto
