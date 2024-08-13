@@ -6,7 +6,7 @@ from datetime import datetime
 from pyrogram import __version__, filters, Client
 from pyrogram.types import Message
 from platform import python_version
-from Romeo import SUDO_USER
+from Romeo import SUDO_USER, app
 from config import*
 
 START_TIME = datetime.utcnow()
