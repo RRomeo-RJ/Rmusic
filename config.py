@@ -9,3 +9,4 @@ SUDO_USERS = list(map(int, getenv("SUDO_USERS", "").split()))
 ALIVE_PIC = getenv("ALIVE_PIC", "https://telegra.ph/file/e745fdaf1966f228582dc.jpg")
 REPO_URL = getenv("REPO_URL", "https://github.com/RRomeo-RJ/Rmusic")
 BRANCH = getenv("BRANCH", "main")
+LOG_FILE_NAME = "logs.txt"
