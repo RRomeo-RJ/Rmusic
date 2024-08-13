@@ -134,47 +134,10 @@ async def play(c: Client, m: Message):
     chat_id = m.chat.id
     _assistant = await get_assistant(chat_id, "assistant")
     assistant = _assistant["saveassistant"]
-    keyboard = InlineKeyboardMarkup(
-                  [[
-                      InlineKeyboardButton("⏹", callback_data="cbstop"),
-                      InlineKeyboardButton("⏸", callback_data="cbpause"),
-                      InlineKeyboardButton("⏭️", callback_data="skip"),
-                      InlineKeyboardButton("▶️", callback_data="cbresume"),
-                  ],[
-                      InlineKeyboardButton(text="✨ ɢʀᴏᴜᴘ", url=f"https://t.me/RomeoBot_op"),
-                      InlineKeyboardButton(text="📣 ᴄʜᴀɴɴᴇʟ", url=f"https://t.me/Romeobot"),
-                  ],[
-                      InlineKeyboardButton("🗑", callback_data="cls")],
-                  ]
-             )
-    if m.sender_chat:
-        return await m.reply_text("you're an __Anonymous__ Admin !\n\n» revert back to user account from admin rights.")
-    try:
-        aing = await c.get_me()
-    except Exception as e:
-        return await m.reply_text(f"error:\n\n{e}")
-    a = await c.get_chat_member(chat_id, aing.id)
-    if a.status != "administrator":
-        await m.reply_text(
-            f"💡 To use me, I need to be an **Administrator** with the following **permissions**:\n\n» ❌ __Delete messages__\n» ❌ __Add users__\n» ❌ __Manage video chat__\n\nData is **updated** automatically after you **promote me**"
-        )
-        return
-    if not a.can_manage_voice_chats:
-        await m.reply_text(
-            "missing required permission:" + "\n\n» ❌ __Manage video chat__"
-        )
-        return
-    if not a.can_delete_messages:
-        await m.reply_text(
-            "missing required permission:" + "\n\n» ❌ __Delete messages__"
-        )
-        return
-    if not a.can_invite_users:
-        await m.reply_text("missing required permission:" + "\n\n» ❌ __Add users__")
-        return
+    
     if replied:
         if replied.audio or replied.voice:
-            suhu = await replied.reply("📥 **downloading audio...**")
+            romeo = await replied.reply("📥 **downloading audio...**")
             dl = await replied.download()
             link = replied.link
             if replied.audio:
@@ -189,48 +152,33 @@ async def play(c: Client, m: Message):
                 songname = "Voice Note"
             if chat_id in QUEUE:
                 pos = add_to_queue(chat_id, songname, dl, link, "Audio", 0)
-                await suhu.delete()
+                await romeo.delete()
                 await m.reply_photo(
                     photo=f"{QUE_IMG}",
-                    caption=f"💡 **Track added to queue »** `{pos}`\n\n🏷 **Name:** [{songname}]({link}) | `music`\n💭 **Chat:** `{chat_id}`\n🎧 **Request by:** {m.from_user.mention()}",
-                    reply_markup=keyboard,
-                )
+                    caption=f"💡 **Track added to queue »** `{pos}`\n\n🏷 **Name:** [{songname}]({link}) | `music`\n💭 **Chat:** `{chat_id}`\n🎧 **Request by:** {m.from_user.mention()}")
             else:
              try:
                 await call_py.join_group_call(chat_id, AudioPiped(dl, ), stream_type=StreamType().local_stream, )
                 await add_active_chat(chat_id)
                 add_to_queue(chat_id, songname, dl, link, "Audio", 0)
-                await suhu.delete()
+                await romeo.delete()
                 requester = f"[{m.from_user.first_name}](tg://user?id={m.from_user.id})"
                 await m.reply_photo(
                     photo=f"{PLAY_IMG}",
-                    caption=f"🏷 **Name:** [{songname}]({link})\n💭 **Chat:** `{chat_id}`\n💡 **Status:** `Playing`\n🎧 **Request by:** {requester}\n📹 **Stream type:** `Music`",
-                    reply_markup=keyboard,
-                )
+                    caption=f"🏷 **Name:** [{songname}]({link})\n💭 **Chat:** `{chat_id}`\n💡 **Status:** `Playing`\n🎧 **Request by:** {requester}\n📹 **Stream type:** `Music`")
              except Exception as e:
-                await suhu.delete()
+                await romeo.delete()
                 await m.reply_text(f"🚫 error:\n\n» {e}")
         
     else:
         if len(m.command) < 2:
-         await m.reply_photo(
-                     photo=f"{CMD_IMG}",
-                    caption="💬**Usage: /play Give a Title Song To Play Music or /vplay for Video Play**"
-                    ,
-                      reply_markup=InlineKeyboardMarkup(
-                    [
-                        [
-                            InlineKeyboardButton("🗑 Close", callback_data="cls")
-                        ]
-                    ]
-                )
-            )
+         await m.reply_text(f"💬**Usage: /play Give a Title Song To Play Music or /vplay for Video Play**")
         else:
-            suhu = await m.reply_text(f"**Downloading**\n\n0% ▓▓▓▓▓▓▓▓▓▓▓▓ 100%")
+            romeo = await m.reply_text(f"**Downloading**\n\n0% ▓▓▓▓▓▓▓▓▓▓▓▓ 100%")
             query = m.text.split(None, 1)[1]
             search = ytsearch(query)
             if search == 0:
-                await suhu.edit("💬 **no results found.**")
+                await romeo.edit("💬 **no results found.**")
             else:
                 songname = search[0]
                 title = search[0]
@@ -246,32 +194,28 @@ async def play(c: Client, m: Message):
                 format = "bestaudio"
                 abhi, ytlink = await ytdl(format, url)
                 if abhi == 0:
-                    await suhu.edit(f"💬 yt-dl issues detected\n\n» `{ytlink}`")
+                    await romeo.edit(f"💬 yt-dl issues detected\n\n» `{ytlink}`")
                 else:
                     if chat_id in QUEUE:
                         pos = add_to_queue(chat_id, songname, ytlink, url, "Audio", 0)
-                        await suhu.delete()
+                        await romeo.delete()
                         requester = (
                             f"[{m.from_user.first_name}](tg://user?id={m.from_user.id})"
                         )
                         await m.reply_photo(
                             photo=queuem,
-                            caption=f"💡 **Track added to queue »** `{pos}`\n\n🏷 **Name:** [{songname[:22]}]({url}) | `music`\n**⏱ Duration:** `{duration}`\n🎧 **Request by:** {requester}",
-                            reply_markup=keyboard,
-                        )
+                            caption=f"💡 **Track added to queue »** `{pos}`\n\n🏷 **Name:** [{songname[:22]}]({url}) | `music`\n**⏱ Duration:** `{duration}`\n🎧 **Request by:** {requester}")
                     else:
                         try:
-                            await suhu.edit(f"**Downloader**\n\n**Title**: {title[:22]}\n\n100% ████████████100%\n\n**Time Taken**: 00:00 Seconds\n\n**Converting Audio[FFmpeg Process]**")
+                            await romeo.edit(f"**Downloader**\n\n**Title**: {title[:22]}\n\n100% ████████████100%\n\n**Time Taken**: 00:00 Seconds\n\n**Converting Audio[FFmpeg Process]**")
                             await call_py.join_group_call(chat_id, AudioPiped(ytlink, ), stream_type=StreamType().local_stream, )
                             await add_active_chat(chat_id)
                             add_to_queue(chat_id, songname, ytlink, url, "Audio", 0)
-                            await suhu.delete()
+                            await romeo.delete()
                             requester = f"[{m.from_user.first_name}](tg://user?id={m.from_user.id})"
                             await m.reply_photo(
                                 photo=image,
-                                caption=f"🏷 **Name:** [{songname[:22]}]({url})\n**⏱ Duration:** `{duration}`\n💡 **Status:** `Playing`\n🎧 **Request by:** {requester}",
-                                reply_markup=keyboard,
-                            )
+                                caption=f"🏷 **Name:** [{songname[:22]}]({url})\n**⏱ Duration:** `{duration}`\n💡 **Status:** `Playing`\n🎧 **Request by:** {requester}")
                         except Exception as ep:
-                            await suhu.delete()
+                            await romeo.delete()
                             await m.reply_text(f"💬 error: `{ep}`")
