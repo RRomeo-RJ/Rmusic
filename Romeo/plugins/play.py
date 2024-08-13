@@ -11,6 +11,7 @@ from youtubesearchpython import VideosSearch
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import yt_dlp
 import ffmpeg
+from Romeo.helper.thumbnail import *
 from Romeo import app, call_py
 from Romeo.active import *
 from Romeo.fonts import CHAT_TITLE
