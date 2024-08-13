@@ -1,5 +1,6 @@
 from pyrogram import Client
 from config import API_ID, API_HASH, SUDO_USERS, OWNER_ID, BOT_TOKEN, STRING_SESSION
+from pytgcalls import PyTgCalls
 
 spam_chats = []
 SUDO_USER = SUDO_USERS
@@ -23,3 +24,4 @@ client = Client(
     plugins=dict(root="Romeo/plugins")
 )
 
+call_py = PyTgCalls(client)
