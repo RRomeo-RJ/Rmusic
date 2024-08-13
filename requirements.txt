@@ -4,7 +4,6 @@ motor
 pyrogram
 py-tgcalls
 requests
-subprocess
 telegraph
 tgcrypto
 yt-dlp
