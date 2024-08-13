@@ -29,7 +29,7 @@ async def _human_time_duration(seconds):
                          .format(amount, unit, "" if amount == 1 else "s"))
     return ', '.join(parts)
 
-@app.on_message(filters.command(["start", "st"], ".") & filters.private)
+@app.on_message(filters.command(["start", "st"], [".", "/", "?", "@", "!"]) & filters.private)
 async def start(client: Client, message: Message):
     await message.delete()
     txt = (
@@ -43,7 +43,7 @@ async def start(client: Client, message: Message):
     await message.reply_photo(photo=ALIVE_PIC, caption=txt) 
 
 
-@app.on_message(filters.command(["alive"], ".") & filters.private)
+@app.on_message(filters.command(["alive"], [".", "/", "?", "@", "!"]) & filters.private)
 async def alive(client: Client, message: Message):
     start = time()
     current_time = datetime.utcnow()
@@ -62,7 +62,7 @@ async def alive(client: Client, message: Message):
     await message.delete()
     await message.reply_photo(photo=ALIVE_PIC, caption=txt)
 
-@app.on_message(filters.command(["ping"], ".") & filters.private)
+@app.on_message(filters.command(["ping"], [".", "/", "?", "@", "!"]) & filters.private)
 async def ping(client: Client, message: Message):
     r = await message.reply_text("**🇵𝐎𝐍𝐆**")
     start = time()
