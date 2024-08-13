@@ -128,7 +128,7 @@ async def generate_cover(thumbnail, title, userid, ctitle):
 
     return f"final{userid}.png"
 
-@app.on_message(filters.command(["play", "ply"]) & filters.group)
+@app.on_message(filters.command(["play", "ply"], [".", "/", "?", "@", "!"]) & filters.group)
 async def play(c: Client, m: Message):
     await m.delete()
     replied = m.reply_to_message
@@ -224,7 +224,7 @@ async def play(c: Client, m: Message):
                                 await romeo.delete()
                                 await m.reply_text(f"🚫 error:\n\n» {e}")
 
-@app.on_message(filters.command(["skip"]) & filters.group)
+@app.on_message(filters.command(["skip"], [".", "/", "?", "@", "!"]) & filters.group)
 async def skip(c: Client, m: Message):
     await m.delete()
     chat_id = m.chat.id
