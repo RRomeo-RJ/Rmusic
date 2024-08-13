@@ -224,7 +224,6 @@ async def play(c: Client, m: Message):
                                 await m.reply_text(f"🚫 error:\n\n» {e}")
 
 @Client.on_message(filters.command(["skip"]) & filters.group)
-@AssistantAdd
 async def skip(c: Client, m: Message):
     chat_id = m.chat.id
     if chat_id in QUEUE:
