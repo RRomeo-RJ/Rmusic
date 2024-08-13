@@ -127,7 +127,7 @@ async def generate_cover(thumbnail, title, userid, ctitle):
 
     return f"final{userid}.png"
 
-@Client.on_message(filters.command(["play", "ply"]) & filters.group)
+@app.on_message(filters.command(["play", "ply"]) & filters.group)
 async def play(c: Client, m: Message):
     await m.delete()
     replied = m.reply_to_message
@@ -223,8 +223,9 @@ async def play(c: Client, m: Message):
                                 await romeo.delete()
                                 await m.reply_text(f"🚫 error:\n\n» {e}")
 
-@Client.on_message(filters.command(["skip"]) & filters.group)
+@app.on_message(filters.command(["skip"]) & filters.group)
 async def skip(c: Client, m: Message):
+    await m.delete()
     chat_id = m.chat.id
     if chat_id in QUEUE:
         await call_py.leave_group_call(chat_id)  # Stop the current stream
