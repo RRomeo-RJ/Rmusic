@@ -2,8 +2,8 @@ aiofiles
 aiohttp
 motor
 pyrogram
-py-tgcalls
+git+https://github.com/RRomeoRJ0143/pytgcalls
 requests
 telegraph
 tgcrypto
-yt-dlp
+git+https://github.com/yt-dlp/yt-dlp
