@@ -1,5 +1,6 @@
 aiofiles
 aiohttp
+ffmpeg-python
 motor
 pillow
 pyrogram
