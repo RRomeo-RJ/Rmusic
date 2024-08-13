@@ -1,6 +1,7 @@
 aiofiles
 aiohttp
 motor
+pillow
 pyrogram
 py-tgcalls==0.9.7
 requests
