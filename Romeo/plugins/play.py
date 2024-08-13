@@ -1,125 +1,264 @@
 import aiohttp
+import asyncio
+import os
+import random
 import aiofiles
 from pyrogram import Client, filters
-from pyrogram.types import Message
+from pyrogram.errors import UserAlreadyParticipant, UserNotParticipant
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from pytgcalls import StreamType
 from pytgcalls.types.input_stream import AudioPiped
+from youtubesearchpython import VideosSearch
 import yt_dlp
 from Romeo import app, call_py
-import asyncio
-from collections import deque
-import os
-
-# Queue to hold songs
-song_queue = deque()
-is_playing = False
-skip_flag = False
+from Romeo.active import *
+from Romeo.queues import QUEUE, add_to_queue
 
 
-async def ytdl(link: str):
-    """Get the direct URL for audio and thumbnail from a YouTube link using yt-dlp."""
+themes = ["blue", "red", "pink", "purple"]
+colors = ["white", "black", "red", "orange", "yellow", "green", "cyan", "azure", "blue", "violet", "magenta", "pink"]
+
+
+def ytsearch(query):
     try:
-        # Extract info using yt-dlp
-        ydl = yt_dlp.YoutubeDL()
-        info = ydl.extract_info(link, download=False)
-        audio_url = info.get("url", None)
-        thumbnail_url = info.get("thumbnail", None)
-        return audio_url, thumbnail_url
+        search = VideosSearch(query, limit=1).result()
+        data = search["result"][0]
+        songname = data["title"]
+        url = data["link"]
+        duration = data["duration"]
+        thumbnail = f"https://i.ytimg.com/vi/{data['id']}/hqdefault.jpg"
+        videoid = data["id"]
+        return [songname, url, duration, thumbnail, videoid]
     except Exception as e:
-        print(f"Error extracting info: {e}")
-        return None, None
+        print(e)
+        return 0
 
-async def download_audio(url: str, file_path: str):
-    """Download the audio file from a URL."""
+
+async def ytdl(format: str, link: str):
+    stdout, stderr = await bash(f'yt-dlp --geo-bypass -g -f "[height<=?720][width<=?1280]" {link}')
+    if stdout:
+        return 1, stdout
+    return 0, stderr
+
+chat_id = None
+DISABLED_GROUPS = []
+useer = "NaN"
+ACTV_CALLS = []
+
+
+
+
+def transcode(filename):
+    ffmpeg.input(filename).output(
+        "input.raw", 
+        format="s16le", 
+        acodec="pcm_s16le", 
+        ac=2, 
+        ar="48k"
+    ).overwrite_output().run()
+    os.remove(filename)
+
+def convert_seconds(seconds):
+    seconds = seconds % (24 * 3600)
+    seconds %= 3600
+    minutes = seconds // 60
+    seconds %= 60
+    return "%02d:%02d" % (minutes, seconds)
+
+def time_to_seconds(time):
+    stringt = str(time)
+    return sum(int(x) * 60 ** i for i, x in enumerate(reversed(stringt.split(":"))))
+
+
+
+def changeImageSize(maxWidth, maxHeight, image):
+    widthRatio = maxWidth / image.size[0]
+    heightRatio = maxHeight / image.size[1]
+    newWidth = int(widthRatio * image.size[0])
+    newHeight = int(heightRatio * image.size[1])
+    newImage = image.resize((newWidth, newHeight))
+    return newImage
+
+
+async def generate_cover(thumbnail, title, userid, ctitle):
     async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
+        async with session.get(thumbnail) as resp:
             if resp.status == 200:
-                async with aiofiles.open(file_path, 'wb') as f:
-                    await f.write(await resp.read())
-            else:
-                print(f"Failed to download audio: HTTP {resp.status}")
+                f = await aiofiles.open(f"thumb{userid}.png", mode="wb")
+                await f.write(await resp.read())
+                await f.close()
+    images = random.choice(themes)
+    border = random.choice(colors)
+    image1 = Image.open(f"thumb{userid}.png")
+    image2 = Image.open(f"Romeo/helper/rj/{images}.png")
+    image3 = changeImageSize(1280, 720, image1)
+    image4 = changeImageSize(1280, 720, image2)
+    image5 = image3.convert("RGBA")
+    image6 = image4.convert("RGBA")
+    Image.alpha_composite(image5, image6).save(f"temp{userid}.png")
+    logo = Image.open(f"temp{userid}.png")
+    img = ImageOps.expand(logo, border=10, fill=f"{border}")
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.truetype("Romeo/helper/rj/font.otf", 55)
+    font2 = ImageFont.truetype("Romeo/helper/rj/font.otf", 35)
+    draw.text((20, 555), f"Title: {title[:50]} ...", (255, 255, 255), font=font)
+    draw.text((20, 615), f"Duration: {duration}", (255, 255, 255), font=font)
+    draw.text((20, 675), f"Views: {views}", (255, 255, 255), font=font)
+    draw.text((10, 10), f"RJ•MUSIC", (255, 255, 255), font=font2)
+    img.save(f"final{userid}.png")
+    os.remove(f"temp{userid}.png")
+    os.remove(f"thumb{userid}.png") 
+    final = f"final{userid}.png"
+    return final
 
-async def download_thumbnail(url: str, file_path: str):
-    """Download the thumbnail image from a URL."""
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
-            if resp.status == 200:
-                async with aiofiles.open(file_path, 'wb') as f:
-                    await f.write(await resp.read())
-            else:
-                print(f"Failed to download thumbnail: HTTP {resp.status}")
 
-async def play_song(chat_id: int, file_path: str):
-    """Play the song in a voice chat."""
-    await call_py.join_group_call(
-        chat_id,
-        AudioPiped(file_path),
-        stream_type=StreamType().local_stream
-    )
 
-async def stop_playback():
-    """Stop current playback."""
-    global skip_flag
-    skip_flag = True
-    await call_py.leave_group_call()
-
-async def process_queue(client: Client, chat_id: int):
-    """Process songs in the queue and play them one by one."""
-    global is_playing, skip_flag
-    if is_playing:
+@Client.on_message(filters.command(["play", "ply"]) & filters.group)
+@AssistantAdd
+async def play(c: Client, m: Message):
+    await m.delete()
+    replied = m.reply_to_message
+    chat_id = m.chat.id
+    _assistant = await get_assistant(chat_id, "assistant")
+    assistant = _assistant["saveassistant"]
+    keyboard = InlineKeyboardMarkup(
+                  [[
+                      InlineKeyboardButton("⏹", callback_data="cbstop"),
+                      InlineKeyboardButton("⏸", callback_data="cbpause"),
+                      InlineKeyboardButton("⏭️", callback_data="skip"),
+                      InlineKeyboardButton("▶️", callback_data="cbresume"),
+                  ],[
+                      InlineKeyboardButton(text="✨ ɢʀᴏᴜᴘ", url=f"https://t.me/RomeoBot_op"),
+                      InlineKeyboardButton(text="📣 ᴄʜᴀɴɴᴇʟ", url=f"https://t.me/Romeobot"),
+                  ],[
+                      InlineKeyboardButton("🗑", callback_data="cls")],
+                  ]
+             )
+    if m.sender_chat:
+        return await m.reply_text("you're an __Anonymous__ Admin !\n\n» revert back to user account from admin rights.")
+    try:
+        aing = await c.get_me()
+    except Exception as e:
+        return await m.reply_text(f"error:\n\n{e}")
+    a = await c.get_chat_member(chat_id, aing.id)
+    if a.status != "administrator":
+        await m.reply_text(
+            f"💡 To use me, I need to be an **Administrator** with the following **permissions**:\n\n» ❌ __Delete messages__\n» ❌ __Add users__\n» ❌ __Manage video chat__\n\nData is **updated** automatically after you **promote me**"
+        )
         return
-    is_playing = True
-    skip_flag = False
-    
-    while song_queue:
-        if skip_flag:
-            skip_flag = False
-            continue
+    if not a.can_manage_voice_chats:
+        await m.reply_text(
+            "missing required permission:" + "\n\n» ❌ __Manage video chat__"
+        )
+        return
+    if not a.can_delete_messages:
+        await m.reply_text(
+            "missing required permission:" + "\n\n» ❌ __Delete messages__"
+        )
+        return
+    if not a.can_invite_users:
+        await m.reply_text("missing required permission:" + "\n\n» ❌ __Add users__")
+        return
+    if replied:
+        if replied.audio or replied.voice:
+            suhu = await replied.reply("📥 **downloading audio...**")
+            dl = await replied.download()
+            link = replied.link
+            if replied.audio:
+                if replied.audio.title:
+                    songname = replied.audio.title[:70]
+                else:
+                    if replied.audio.file_name:
+                        songname = replied.audio.file_name[:70]
+                    else:
+                        songname = "Audio"
+            elif replied.voice:
+                songname = "Voice Note"
+            if chat_id in QUEUE:
+                pos = add_to_queue(chat_id, songname, dl, link, "Audio", 0)
+                await suhu.delete()
+                await m.reply_photo(
+                    photo=f"{QUE_IMG}",
+                    caption=f"💡 **Track added to queue »** `{pos}`\n\n🏷 **Name:** [{songname}]({link}) | `music`\n💭 **Chat:** `{chat_id}`\n🎧 **Request by:** {m.from_user.mention()}",
+                    reply_markup=keyboard,
+                )
+            else:
+             try:
+                await call_py.join_group_call(chat_id, AudioPiped(dl, ), stream_type=StreamType().local_stream, )
+                await add_active_chat(chat_id)
+                add_to_queue(chat_id, songname, dl, link, "Audio", 0)
+                await suhu.delete()
+                requester = f"[{m.from_user.first_name}](tg://user?id={m.from_user.id})"
+                await m.reply_photo(
+                    photo=f"{PLAY_IMG}",
+                    caption=f"🏷 **Name:** [{songname}]({link})\n💭 **Chat:** `{chat_id}`\n💡 **Status:** `Playing`\n🎧 **Request by:** {requester}\n📹 **Stream type:** `Music`",
+                    reply_markup=keyboard,
+                )
+             except Exception as e:
+                await suhu.delete()
+                await m.reply_text(f"🚫 error:\n\n» {e}")
         
-        url, file_path, thumbnail_path = song_queue.popleft()
-        audio_url, thumbnail_url = await ytdl(url)
-        if audio_url:
-            await download_audio(audio_url, file_path)
-            if thumbnail_url:
-                await download_thumbnail(thumbnail_url, thumbnail_path)
-                await client.send_photo(chat_id, thumbnail_path, caption=f"Now playing: {url}")
-            else:
-                await client.send_message(chat_id, f"Now playing: {url}")
-            await play_song(chat_id, file_path)
-            await asyncio.sleep(10)  # Adjust this as needed for the song duration
-            os.remove(thumbnail_path)  # Clean up thumbnail file after sending
-        else:
-            print(f"Failed to get URL for {url}")
-    
-    is_playing = False
-
-@app.on_message(filters.command("play") & filters.group)
-async def handle_play(client: Client, message: Message):
-    """Handle the /play command in any group."""
-    await message.delete()
-
-    if len(message.command) < 2:
-        await message.reply_text("Usage: /play <YouTube URL>")
-        return
-
-    url = message.command[1]
-    chat_id = message.chat.id
-    file_path = f'audio_file_{len(song_queue)}.mp3'  # Unique file name for each song
-    thumbnail_path = f'thumbnail_{len(song_queue)}.jpg'  # Unique file name for each thumbnail
-
-    song_queue.append((url, file_path, thumbnail_path))
-    await message.reply_text(f"Added to queue: {url}")
-
-    if not is_playing:
-        await process_queue(client, chat_id)
-
-@app.on_message(filters.command("skip") & filters.group)
-async def handle_skip(client: Client, message: Message):
-    """Handle the /skip command to skip the current song."""
-    await message.delete()
-    if is_playing:
-        await stop_playback()
-        await message.reply_text("Song skipped.")
-        await process_queue(client, message.chat.id)
     else:
-        await message.reply_text("No song is currently playing.")
+        if len(m.command) < 2:
+         await m.reply_photo(
+                     photo=f"{CMD_IMG}",
+                    caption="💬**Usage: /play Give a Title Song To Play Music or /vplay for Video Play**"
+                    ,
+                      reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton("🗑 Close", callback_data="cls")
+                        ]
+                    ]
+                )
+            )
+        else:
+            suhu = await m.reply_text(f"**Downloading**\n\n0% ▓▓▓▓▓▓▓▓▓▓▓▓ 100%")
+            query = m.text.split(None, 1)[1]
+            search = ytsearch(query)
+            if search == 0:
+                await suhu.edit("💬 **no results found.**")
+            else:
+                songname = search[0]
+                title = search[0]
+                url = search[1]
+                duration = search[2]
+                thumbnail = search[3]
+                videoid = search[4]
+                userid = m.from_user.id
+                gcname = m.chat.title
+                ctitle = await CHAT_TITLE(gcname)
+                image = await play_thumb(videoid)
+                queuem = await queue_thumb(videoid)
+                format = "bestaudio"
+                abhi, ytlink = await ytdl(format, url)
+                if abhi == 0:
+                    await suhu.edit(f"💬 yt-dl issues detected\n\n» `{ytlink}`")
+                else:
+                    if chat_id in QUEUE:
+                        pos = add_to_queue(chat_id, songname, ytlink, url, "Audio", 0)
+                        await suhu.delete()
+                        requester = (
+                            f"[{m.from_user.first_name}](tg://user?id={m.from_user.id})"
+                        )
+                        await m.reply_photo(
+                            photo=queuem,
+                            caption=f"💡 **Track added to queue »** `{pos}`\n\n🏷 **Name:** [{songname[:22]}]({url}) | `music`\n**⏱ Duration:** `{duration}`\n🎧 **Request by:** {requester}",
+                            reply_markup=keyboard,
+                        )
+                    else:
+                        try:
+                            await suhu.edit(f"**Downloader**\n\n**Title**: {title[:22]}\n\n100% ████████████100%\n\n**Time Taken**: 00:00 Seconds\n\n**Converting Audio[FFmpeg Process]**")
+                            await call_py.join_group_call(chat_id, AudioPiped(ytlink, ), stream_type=StreamType().local_stream, )
+                            await add_active_chat(chat_id)
+                            add_to_queue(chat_id, songname, ytlink, url, "Audio", 0)
+                            await suhu.delete()
+                            requester = f"[{m.from_user.first_name}](tg://user?id={m.from_user.id})"
+                            await m.reply_photo(
+                                photo=image,
+                                caption=f"🏷 **Name:** [{songname[:22]}]({url})\n**⏱ Duration:** `{duration}`\n💡 **Status:** `Playing`\n🎧 **Request by:** {requester}",
+                                reply_markup=keyboard,
+                            )
+                        except Exception as ep:
+                            await suhu.delete()
+                            await m.reply_text(f"💬 error: `{ep}`")
