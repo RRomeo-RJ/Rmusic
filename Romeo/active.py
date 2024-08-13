@@ -1,5 +1,3 @@
-#Active
-
 active = []
 activevideo = []
 Romeo = []
