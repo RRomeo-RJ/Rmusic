@@ -132,8 +132,8 @@ async def play(c: Client, m: Message):
     await m.delete()
     replied = m.reply_to_message
     chat_id = m.chat.id
-    _assistant = await get_assistant(chat_id, "assistant")
-    assistant = _assistant["saveassistant"]
+ #   _assistant = await get_assistant(chat_id, "assistant")
+ #   assistant = _assistant["saveassistant"]
     
     if replied:
         if replied.audio or replied.voice:
