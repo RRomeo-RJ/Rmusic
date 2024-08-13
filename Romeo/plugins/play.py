@@ -9,7 +9,9 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from pytgcalls import StreamType
 from pytgcalls.types.input_stream import AudioPiped
 from youtubesearchpython import VideosSearch
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import yt_dlp
+import ffmpeg
 from Romeo import app, call_py
 from Romeo.active import *
 from Romeo.queues import QUEUE, add_to_queue
@@ -18,6 +20,17 @@ from Romeo.queues import QUEUE, add_to_queue
 themes = ["blue", "red", "pink", "purple"]
 colors = ["white", "black", "red", "orange", "yellow", "green", "cyan", "azure", "blue", "violet", "magenta", "pink"]
 
+
+async def bash(command: str):
+    """Run a shell command asynchronously and return the output."""
+    proc = await asyncio.create_subprocess_shell(
+        command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await proc.communicate()
+    return stdout.decode(), stderr.decode()
+    
 
 def ytsearch(query):
     try:
