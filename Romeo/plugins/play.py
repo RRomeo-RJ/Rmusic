@@ -14,6 +14,7 @@ import os
 # Queue to hold songs
 song_queue = deque()
 is_playing = False
+skip_flag = False
 
 def bash(command):
     """Run a shell command and return the output."""
@@ -61,14 +62,25 @@ async def play_song(chat_id: int, file_path: str):
         stream_type=StreamType().local_stream
     )
 
+async def stop_playback():
+    """Stop current playback."""
+    global skip_flag
+    skip_flag = True
+    await pytgcalls.leave_group_call()
+
 async def process_queue(client: Client, chat_id: int):
     """Process songs in the queue and play them one by one."""
-    global is_playing
+    global is_playing, skip_flag
     if is_playing:
         return
     is_playing = True
+    skip_flag = False
     
     while song_queue:
+        if skip_flag:
+            skip_flag = False
+            continue
+        
         url, file_path, thumbnail_path = song_queue.popleft()
         audio_url, thumbnail_url = await ytdl(url)
         if audio_url:
@@ -105,3 +117,14 @@ async def handle_play(client: Client, message: Message):
 
     if not is_playing:
         await process_queue(client, chat_id)
+
+@app.on_message(filters.command("skip") & filters.group)
+async def handle_skip(client: Client, message: Message):
+    """Handle the /skip command to skip the current song."""
+    await message.delete()
+    if is_playing:
+        await stop_playback()
+        await message.reply_text("Song skipped.")
+        await process_queue(client, message.chat.id)
+    else:
+        await message.reply_text("No song is currently playing.")
