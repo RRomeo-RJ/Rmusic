@@ -10,3 +10,4 @@ tgcrypto
 git+https://github.com/yt-dlp/yt-dlp
 youtube-search-python
 youtube-search
+
