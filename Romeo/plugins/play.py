@@ -22,17 +22,16 @@ def bash(command):
 
 async def ytdl(link: str):
     """Get the direct URL for audio and thumbnail from a YouTube link using yt-dlp."""
-    # Get video info
-    stdout, stderr = bash(f'yt-dlp -j {link}')
-    if stderr:
-        print(f"Error: {stderr}")
+    try:
+        # Extract info using yt-dlp
+        ydl = yt_dlp.YoutubeDL()
+        info = ydl.extract_info(link, download=False)
+        audio_url = info.get("url", None)
+        thumbnail_url = info.get("thumbnail", None)
+        return audio_url, thumbnail_url
+    except Exception as e:
+        print(f"Error extracting info: {e}")
         return None, None
-
-    info = yt_dlp.YoutubeDL().extract_info(link, download=False)
-    audio_url = info.get("url", None)
-    thumbnail_url = info.get("thumbnail", None)
-    
-    return audio_url, thumbnail_url
 
 async def download_audio(url: str, file_path: str):
     """Download the audio file from a URL."""
@@ -41,6 +40,8 @@ async def download_audio(url: str, file_path: str):
             if resp.status == 200:
                 async with aiofiles.open(file_path, 'wb') as f:
                     await f.write(await resp.read())
+            else:
+                print(f"Failed to download audio: HTTP {resp.status}")
 
 async def download_thumbnail(url: str, file_path: str):
     """Download the thumbnail image from a URL."""
@@ -49,6 +50,8 @@ async def download_thumbnail(url: str, file_path: str):
             if resp.status == 200:
                 async with aiofiles.open(file_path, 'wb') as f:
                     await f.write(await resp.read())
+            else:
+                print(f"Failed to download thumbnail: HTTP {resp.status}")
 
 async def play_song(chat_id: int, file_path: str):
     """Play the song in a voice chat."""
@@ -85,8 +88,9 @@ async def process_queue(client: Client, chat_id: int):
 
 @app.on_message(filters.command("play") & filters.group)
 async def handle_play(client: Client, message: Message):
-    await message.delete()
     """Handle the /play command in any group."""
+    await message.delete()
+
     if len(message.command) < 2:
         await message.reply_text("Usage: /play <YouTube URL>")
         return
