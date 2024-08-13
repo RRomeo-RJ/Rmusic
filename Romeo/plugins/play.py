@@ -1,12 +1,11 @@
 import aiohttp
 import aiofiles
-import subprocess
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from pytgcalls import PyTgCalls, StreamType
+from pytgcalls import StreamType
 from pytgcalls.types.input_stream import AudioPiped
 import yt_dlp
-from Romeo import app, call_py as pytgcalls
+from Romeo import app, call_py
 import asyncio
 from collections import deque
 import os
@@ -16,10 +15,6 @@ song_queue = deque()
 is_playing = False
 skip_flag = False
 
-def bash(command):
-    """Run a shell command and return the output."""
-    result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return result.stdout.decode(), result.stderr.decode()
 
 async def ytdl(link: str):
     """Get the direct URL for audio and thumbnail from a YouTube link using yt-dlp."""
@@ -56,7 +51,7 @@ async def download_thumbnail(url: str, file_path: str):
 
 async def play_song(chat_id: int, file_path: str):
     """Play the song in a voice chat."""
-    await pytgcalls.join_group_call(
+    await call_py.join_group_call(
         chat_id,
         AudioPiped(file_path),
         stream_type=StreamType().local_stream
@@ -66,7 +61,7 @@ async def stop_playback():
     """Stop current playback."""
     global skip_flag
     skip_flag = True
-    await pytgcalls.leave_group_call()
+    await call_py.leave_group_call()
 
 async def process_queue(client: Client, chat_id: int):
     """Process songs in the queue and play them one by one."""
