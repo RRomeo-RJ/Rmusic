@@ -3,7 +3,7 @@
 </h1>
 
 <p align="center">
-  <img src="https://telegra.ph/file/a62b9c7d9848afde0569e.jpg" alt="Romeo-RJ">
+  <img src="https://telegra.ph/file/e745fdaf1966f228582dc.jpg" alt="Romeo-RJ">
 </p>
 
 <h6 align="center">
@@ -17,6 +17,6 @@
 -------------------------
 ## 𝐃𝐄𝐏𝐋𝐎𝐘𝐌𝐄𝐍𝐓
 
-<p align="center"><a href="http://dashboard.heroku.com/new?template=https://github.com/RRomeo-RJ/Romeo-UserBot"> <img src="https://img.shields.io/badge/Deploy%20On%20Heroku-black?style=for-the-badge&logo=heroku" width="210" height="40"/></a></p>
+<p align="center"><a href="http://dashboard.heroku.com/new?template=https://github.com/RRomeo-RJ/Rmusic"> <img src="https://img.shields.io/badge/Deploy%20On%20Heroku-black?style=for-the-badge&logo=heroku" width="210" height="40"/></a></p>
 
 -------------------------
