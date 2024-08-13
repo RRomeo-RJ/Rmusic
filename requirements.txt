@@ -1,7 +1,8 @@
 aiohttp
 motor
 pyrogram
+py-tgcalls
 requests
 telegraph
 tgcrypto
-
+yt-dlp
