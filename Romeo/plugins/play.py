@@ -85,6 +85,7 @@ async def process_queue(client: Client, chat_id: int):
 
 @app.on_message(filters.command("play") & filters.group)
 async def handle_play(client: Client, message: Message):
+    await message.delete()
     """Handle the /play command in any group."""
     if len(message.command) < 2:
         await message.reply_text("Usage: /play <YouTube URL>")
