@@ -21,30 +21,27 @@ from Romeo.queues import QUEUE, add_to_queue, remove_from_queue
 themes = ["blue", "red", "pink", "purple"]
 colors = ["white", "black", "red", "orange", "yellow", "green", "cyan", "azure", "blue", "violet", "magenta", "pink"]
 
-async def bash(command: str):
-    """Run a shell command asynchronously and return the output."""
-    proc = await asyncio.create_subprocess_shell(
-        command,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-    stdout, stderr = await proc.communicate()
-    return stdout.decode(), stderr.decode()
 
 def ytsearch(query):
     """Search YouTube for the given query and return relevant details."""
     try:
-        search = VideosSearch(query, limit=1).result()
-        data = search["result"][0]
-        songname = data["title"]
-        url = data["link"]
-        duration = data["duration"]
-        thumbnail = f"https://i.ytimg.com/vi/{data['id']}/hqdefault.jpg"
-        videoid = data["id"]
+        # Initialize VideosSearch with the query and limit
+        search = VideosSearch(query, limit=1)
+        result = search.result()
+        
+        # Access the data from the result
+        data = result.get("result", [])[0]  # Get the first result
+        
+        songname = data.get("title", "Unknown Title")
+        url = data.get("link", "No URL")
+        duration = data.get("duration", "No Duration")
+        videoid = data.get("id", "No ID")
+        thumbnail = f"https://i.ytimg.com/vi/{videoid}/hqdefault.jpg" if videoid != "No ID" else "No Thumbnail"
+        
         return [songname, url, duration, thumbnail, videoid]
     except Exception as e:
         print(f"Error in ytsearch: {e}")
-        return 0
+        return None
 
 async def ytdl(format: str, link: str):
     """Download the audio stream using yt-dlp."""
