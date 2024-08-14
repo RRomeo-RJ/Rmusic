@@ -25,23 +25,17 @@ colors = ["white", "black", "red", "orange", "yellow", "green", "cyan", "azure",
 def ytsearch(query):
     """Search YouTube for the given query and return relevant details."""
     try:
-        # Initialize VideosSearch with the query and limit
-        search = VideosSearch(query, limit=1)
-        result = search.result()
-        
-        # Access the data from the result
-        data = result.get("result", [])[0]  # Get the first result
-        
-        songname = data.get("title", "Unknown Title")
-        url = data.get("link", "No URL")
-        duration = data.get("duration", "No Duration")
-        videoid = data.get("id", "No ID")
-        thumbnail = f"https://i.ytimg.com/vi/{videoid}/hqdefault.jpg" if videoid != "No ID" else "No Thumbnail"
-        
+        search = VideosSearch(query, limit=1).result()
+        data = search["result"][0]
+        songname = data["title"]
+        url = data["link"]
+        duration = data["duration"]
+        thumbnail = f"https://i.ytimg.com/vi/{data['id']}/hqdefault.jpg"
+        videoid = data["id"]
         return [songname, url, duration, thumbnail, videoid]
     except Exception as e:
         print(f"Error in ytsearch: {e}")
-        return None
+        return 0
 
 async def ytdl(format: str, link: str):
     """Download the audio stream using yt-dlp."""
